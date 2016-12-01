@@ -640,7 +640,7 @@ static void signal_init(void)
 
 static int init_dispatcher(void)
 {
-	if (prase_dispatcher_conf(DESPATCHER_CONF_FILE)) 
+	if (prase_dispatcher_conf("dispatcher.xml")) 
 		return -1;
 
 	signal_init();

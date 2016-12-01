@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Root>
+	<Dispatcher>
+ 		<!-- which cpu-core the main thread of dispatcher will run on -->
+		<MasterAffinity>0</MasterAffinity>	
+		
+		<!-- n-tuple can be: 3:3-tuple, 5:5-tuple -->
+		<NTuple>5</NTuple>		
+		
+		<!-- The Num of App Main Instance -->
+		<AppNum>8</AppNum>
+		
+		<!-- The Num of Dispatcher Instance -->
+		<DispatcherNum>2</DispatcherNum>
+		<!-- Dispatcher Instance Config -->
+		<DispatcherItem>
+			<Item> 
+				<DispatcherItemID>0</DispatcherItemID>
+				<AffinityCore>0</AffinityCore>
+				<PhysicalPortNum>2</PhysicalPortNum>
+				<PhysicalPortID>0,1</PhysicalPortID>
+			</Item>
+			<Item> 
+				<DispatcherItemID>1</DispatcherItemID>
+				<AffinityCore>1</AffinityCore>
+				<PhysicalPortNum>1</PhysicalPortNum>
+				<PhysicalPortID>2</PhysicalPortID>
+			</Item>
+		</DispatcherItem>
+	
+		<!-- The Num of Physical Port Instance -->
+		<PhysicalPortNum>3</PhysicalPortNum>
+		<PhysicalPortItem>
+			<Item> 
+				<PhysicalPortID>0</PhysicalPortID>
+				<RxQueneNum>1</RxQueneNum>
+				<TxQueneNum>1</TxQueneNum>
+				<BufferNum>2047</BufferNum>
+				<BufferLen>2048</BufferLen>
+			</Item>
+			<Item> 
+				<PhysicalPortID>1</PhysicalPortID>
+				<RxQueneNum>1</RxQueneNum>
+				<TxQueneNum>1</TxQueneNum>
+				<BufferNum>2047</BufferNum>
+				<BufferLen>2048</BufferLen>
+			</Item>
+			<Item> 
+				<PhysicalPortID>2</PhysicalPortID>
+				<RxQueneNum>1</RxQueneNum>
+				<TxQueneNum>1</TxQueneNum>
+				<BufferNum>2047</BufferNum>
+				<BufferLen>2048</BufferLen>
+			</Item>
+		</PhysicalPortItem>	
+	</Dispatcher>
+</Root>

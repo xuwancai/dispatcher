@@ -1,8 +1,8 @@
 DIR = $(shell pwd)
 
-INCLUDE = -I./include -I/home/xuwancai/fw-dpdk/build/include 
+INCLUDE = -I./include -I/home/SUNYA_SDK_DPDK/build/include 
 
-LDFLAGS = -L/home/xuwancai/LAM_REL_APOLLO/ctrl_plane/libs/x86_64 -L/home/xuwancai/fw-dpdk/build/lib 
+LDFLAGS = -L/home/SUNYA_SDK_DPDK/build/lib 
 
 LDFLAGS += -ldl -lpthread -lc -lxml2 
 LDFLAGS += -ldpdk
@@ -52,20 +52,21 @@ LDFLAGS += -lrte_timer
 LDFLAGS += -lrte_vhost
 
 CC = gcc
-CFLAGS = -g -Wall -O0 -march=native -m64 ${INCLUDE} ${LDFLAGS}
+CFLAGS = -g -Wall -O0 -march=native -m64 ${INCLUDE}
+BUILD=build
 
 SRC = $(wildcard ${DIR}/*.c)
-OBJ = $(patsubst %.c,%.o, $(notdir ${SRC})) 
+OBJ = $(patsubst %.c,${BUILD}/%.o, $(notdir ${SRC})) 
 
 TARGET = dispatcher
 
 ${TARGET}:${OBJ}
-	$(CC) $(CFLAGS) $^ -o ${TARGET}
+	$(CC) $(CFLAGS) $^ -o ${TARGET} ${LDFLAGS}
 
-%.o:%.c
+${BUILD}/%.o:%.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY:clean
 clean:
 	rm -rf ${TARGET} 
-	rm -rf *.o
+	rm -rf ${BUILD}/*.o
