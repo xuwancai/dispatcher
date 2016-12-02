@@ -28,7 +28,7 @@ ${BUILD}/%.o:%.c
 
 .PHONY:pcap
 pcap:
-	$(CC) -g -O2 -Wall pcap.c -o pcap
+	$(CC) -g -O2 -Wall pcap.c -o pcap -lpcap
     
 .PHONY:clean
 clean:

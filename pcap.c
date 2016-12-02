@@ -17,10 +17,13 @@ unsigned char packet[] = {
 
 void handle_recv(u_char* argument,const struct pcap_pkthdr* packet_header,const u_char* packet_content)
 {
-    static recv = 0;
+    static unsigned long long recv = 0;
     recv++;
-    if (recv % 1000 == 0)
+    if (recv % 1000 == 0) {
         printf("pcap recv num %d=", recv);
+        fflush(stdout);
+    }
+
     return;
 }
                 
@@ -59,7 +62,7 @@ int main(int argc, char* argv[])
 
     if (strcmp(argv[2], "recv") == 0) {
         while (1) {
-            pcap_loop(dev, -1, NULL, NULL);
+            pcap_loop(dev, -1, handle_recv, NULL);
         }
     } else {
         while (1) {
