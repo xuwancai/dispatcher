@@ -17,7 +17,7 @@
 		<DispatcherItem>
 			<Item> 
 				<DispatcherItemID>0</DispatcherItemID>
-				<AffinityCore>0</AffinityCore>
+				<AffinityCore>1</AffinityCore>
 				<PhysicalPortNum>1</PhysicalPortNum>
 				<PhysicalPortID>0</PhysicalPortID>
 			</Item>

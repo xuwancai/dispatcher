@@ -46,7 +46,7 @@
 #define DIPATCHER_RX_DESC_DEFAULT 128
 #define DIPATCHER_TX_DESC_DEFAULT 512
 #define MEMPOOL_CACHE_SIZE 256
-#define MAX_PKT_BURST 32
+#define MAX_PKT_BURST 16
 
 struct ether_addr ports_eth_addr[RTE_MAX_ETHPORTS];
 
@@ -529,7 +529,9 @@ void packet_handle(struct dispatcher_item *dispatcher_item)
     uint32_t i;
     uint32_t portid;
     uint32_t nb_rx;
-    static uint32_t total = 0;
+    uint32_t nb_tx;
+    static uint32_t total_rx = 0;
+    static uint32_t total_tx = 0;
     static uint64_t total_last = 0;
     
 	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
@@ -538,12 +540,16 @@ void packet_handle(struct dispatcher_item *dispatcher_item)
 
 		portid = dispatcher_item->phy_port_id[i];
 		nb_rx = rte_eth_rx_burst((uint8_t) portid, 0, pkts_burst, MAX_PKT_BURST);
-        total += nb_rx;
+        if (nb_rx != 0) {
+            total_rx += nb_rx;
+            nb_tx = rte_eth_tx_burst((uint8_t) portid, 0, pkts_burst, nb_rx);
+            total_tx += nb_tx;
+        }
 	}
 
-    if (total - total_last > 1000) {
-        total_last = total;
-        printf("recv packet: portid=%d, num=%d \n", portid, total);
+    if (total_rx - total_last > 1000) {
+        total_last = total_rx;
+        printf("packet info: portid = %d, rx = %d, tx = %d\n", portid, total_rx, total_tx);
     }
 
 	return;
@@ -841,7 +847,7 @@ int main(int argc, char *argv[])
 		}
 			
 		snprintf(thread_name, RTE_MAX_THREAD_NAME_LEN, "dispatcher%d", i);
-		ret = rte_thread_setname(lcore_config[i].thread_id, thread_name);
+		ret = rte_thread_setname(lcore_config[core_id].thread_id, thread_name);
 		if (ret != 0)
 			printf("Cannot set name for lcore thread\n");
 	}
