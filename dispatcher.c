@@ -48,6 +48,8 @@
 #define MEMPOOL_CACHE_SIZE 256
 #define MAX_PKT_BURST 16
 
+struct rte_dispatcher *rte_dispatcher = NULL;
+
 struct ether_addr ports_eth_addr[RTE_MAX_ETHPORTS];
 
 static const struct rte_eth_conf port_conf = {
@@ -63,6 +65,9 @@ static const struct rte_eth_conf port_conf = {
 		.mq_mode = ETH_MQ_TX_NONE,
 	},
 };
+
+static rte_atomic32_t thread_init_cnt = RTE_ATOMIC32_INIT(0);
+static rte_atomic32_t thread_exit_cnt = RTE_ATOMIC32_INIT(0);
 
 int do_cleanup = 0;
 int global_serial_no=0;
@@ -523,81 +528,6 @@ static int detect_process(char * process_name)
 	return -1;
 }
 
-
-void packet_handle(struct dispatcher_item *dispatcher_item)
-{
-    uint32_t i;
-    uint32_t portid;
-    uint32_t nb_rx;
-    uint32_t nb_tx;
-    static uint32_t total_rx = 0;
-    static uint32_t total_tx = 0;
-    static uint64_t total_last = 0;
-    
-	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
-	
-	for (i = 0; i < dispatcher_item->phy_port_num; i++) {
-
-		portid = dispatcher_item->phy_port_id[i];
-		nb_rx = rte_eth_rx_burst((uint8_t) portid, 0, pkts_burst, MAX_PKT_BURST);
-        if (nb_rx != 0) {
-            total_rx += nb_rx;
-            nb_tx = rte_eth_tx_burst((uint8_t) portid, 0, pkts_burst, nb_rx);
-            total_tx += nb_tx;
-        }
-	}
-
-    if (total_rx - total_last > 1000) {
-        total_last = total_rx;
-        printf("packet info: portid = %d, rx = %d, tx = %d\n", portid, total_rx, total_tx);
-    }
-
-	return;
-}
-
-static rte_atomic32_t thread_init = RTE_ATOMIC32_INIT(0);
-static rte_atomic32_t thread_exit = RTE_ATOMIC32_INIT(0);
-
-void *dispatch_main(void *arg)
-{
-	int ret;
-
-	struct dispatcher_item *dispatcher_item = (struct dispatcher_item *)arg;
-	
-	rte_thread_init_slave(dispatcher_item->affinity_core);
-
-	/* read on our pipe to get commands */
-    rte_atomic32_inc(&thread_init);
-    while (rte_atomic32_read(&thread_init) != dc->dispatcher_num){
-       rte_pause();
-    }
-     
-	/* 最后一个线程写入 */
-	if (dispatcher_item->item_id == (dc->dispatcher_num - 1)) {
-		ret = system("echo 1 > /tmp/dispatcher.ok");
-		if (WIFSIGNALED(ret) && (WTERMSIG(ret)==SIGINT || WTERMSIG(ret)==SIGQUIT)) {
-			printf("Can not create file /tmp/disptcher.ok!\n");
-		}
-	}
-
-    #if 0
-	do { /*waiting for app_main to initialize the share memory */
-		sleep(1);
-		//printf("Pid %d, waiting...\n", getpid());
-	} while (-1 == detect_process("vtysh"));
-    #endif
-    
-	while(1) {
-		if (unlikely(do_cleanup)) {
-		    rte_atomic32_inc(&thread_exit);
-			exit(0);
-		}
-	    packet_handle(dispatcher_item);
-	}
-	
-	exit(0);
-}
-
 void hup(int signo)
 {
 	//print_dispatcher_profile();
@@ -636,6 +566,7 @@ void clean_interface(void)
 
 void clean_global(void)
 {
+	rte_free(rte_dispatcher);
 	clean_interface();
 	clean_dispatcher_conf();
 	return;
@@ -661,6 +592,12 @@ static int init_dispatcher(void)
 	if (prase_dispatcher_conf("dispatcher.xml")) 
 		return -1;
 
+    rte_dispatcher = rte_zmalloc(DISPATCHER_NAME, sizeof(*rte_dispatcher) * dc->dispatcher_num, RTE_CACHE_LINE_SIZE)
+
+    for (i=0; i<dc->dispatcher_num; i++) {
+        memcpy(rte_dispatcher[i]->disp_item, dc->dispatcher_item[i], sizeof(dc->dispatcher_item[i]));
+    }
+    
 	signal_init();
 	
 	return 0;
@@ -674,7 +611,7 @@ static void check_all_ports_link_status(uint8_t port_num)
 	uint8_t portid, count, all_ports_up, print_flag = 0;
 	struct rte_eth_link link;
 
-	printf("\nChecking link status");
+	printf("\nChecking link status: ");
 	fflush(stdout);
 	
 	for (count = 0; count <= MAX_CHECK_TIME; count++) {
@@ -715,7 +652,7 @@ static void check_all_ports_link_status(uint8_t port_num)
 		/* set the print_flag if all ports up or timeout */
 		if (all_ports_up == 1 || count == (MAX_CHECK_TIME - 1)) {
 			print_flag = 1;
-			printf("done\n");
+			printf("finish\n");
 		}
 	}
 }
@@ -800,10 +737,103 @@ static int init_interface()
 	return 0;
 }
 
-/* 初始化dispatcher与app main的队列 */
-int init_queue(void)
+void packet_handle(struct rte_dispatcher *local_dispatcher)
 {
+    uint32_t i;
+    uint32_t portid;
+    uint32_t nb_rx;
+    uint32_t nb_tx;
+    static uint32_t total_rx = 0;
+    static uint32_t total_tx = 0;
+    static uint64_t total_last = 0;
+    
+	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
+	
+	for (i = 0; i < local_dispatcher->disp_item->phy_port_num; i++) {
+
+		portid = local_dispatcher->disp_item->phy_port_id[i];
+		nb_rx = rte_eth_rx_burst((uint8_t) portid, 0, pkts_burst, MAX_PKT_BURST);
+        if (nb_rx != 0) {
+            total_rx += nb_rx;
+            nb_tx = rte_eth_tx_burst((uint8_t) portid, 0, pkts_burst, nb_rx);
+            total_tx += nb_tx;
+        }
+	}
+
+    if (total_rx - total_last > 1000) {
+        total_last = total_rx;
+        printf("packet info: portid = %d, rx = %d, tx = %d\n", portid, total_rx, total_tx);
+    }
+
+	return;
+}
+
+/* 初始化dispatcher与app main的队列 */
+int init_queue(struct rte_dispatcher *local_dispatcher)
+{
+    /* 创建dispatcher 与app main的报文队列 */
+    for (i=0; i<dc->app_num; i++) {
+    	ret = snprintf(ring_name, sizeof(ring_name), "disp-%d:app-main-%d", 
+    	               local_dispatcher->disp_item->item_id, i);
+	    if (ret < 0 || ret >= (int)sizeof(ring_name)) {
+	        printf("creater ring name error %d\n", i);
+            return -1;
+        }
+        
+        ring = rte_ring_create(ring_name, MAX_RING_SIZE, rte_socket_id(), RING_F_SP_ENQ | RING_F_SC_DEQ);
+        if (ring == NULL) {
+            printf("creater ring queue error %s\n", ring_name);
+            return -1;
+        }
+        local_dispatcher->app_ring[i] = ring;
+    }
     return 0;
+}
+
+void dispatch_main(void *arg)
+{
+    int i;
+	int ret;
+	char ring_name[32];
+	struct rte_ring *ring;
+	struct rte_dispatcher *local_dispatcher = (struct rte_dispatcher *)arg;
+	
+	rte_thread_init_slave(local_dispatcher->disp_item->affinity_core);
+
+    /* 创建dispatcher 与app main的报文队列 */
+    if (init_queue(local_dispatcher))
+        exit(0);
+    
+	/* read on our pipe to get commands */
+    rte_atomic32_inc(&thread_init_cnt);
+    while (rte_atomic32_read(&thread_init_cnt) != dc->dispatcher_num) {
+       rte_pause();
+    }
+     
+	/* 最后一个线程写入 */
+	if (local_dispatcher->disp_item->item_id == (dc->dispatcher_num - 1)) {
+		ret = system("echo 1 > /tmp/dispatcher.ok");
+		if (WIFSIGNALED(ret) && (WTERMSIG(ret)==SIGINT || WTERMSIG(ret)==SIGQUIT)) {
+			printf("Can not create file /tmp/disptcher.ok!\n");
+		}
+	}
+
+    #if 0
+	do { /*waiting for app_main to initialize the share memory */
+		sleep(1);
+		//printf("Pid %d, waiting...\n", getpid());
+	} while (-1 == detect_process("vtysh"));
+    #endif
+    
+	while(1) {
+		if (unlikely(do_cleanup)) {
+		    rte_atomic32_inc(&thread_exit_cnt);
+			exit(0);
+		}
+	    packet_handle(local_dispatcher);
+	}
+	
+	exit(0);
 }
 
 int main(int argc, char *argv[])
@@ -818,6 +848,13 @@ int main(int argc, char *argv[])
 		global_serial_no = atoi(argv[1]);
 	}
 
+	ret = system("echo 0 > /tmp/dispatcher.ok");
+	if (WIFSIGNALED(ret) && 
+		(WTERMSIG(ret) == SIGINT || WTERMSIG(ret) == SIGQUIT)) {
+		printf("Can not create file /tmp/disptcher.ok!\n");
+	}
+	exit(0); /* don't run dispatcher on ATOM platform */
+	
 	if (sysconf(_SC_NPROCESSORS_ONLN) < 3) {
 		ret = system("echo 1 > /tmp/dispatcher.ok");
 		if (WIFSIGNALED(ret) && 
@@ -826,21 +863,20 @@ int main(int argc, char *argv[])
 		}
 		exit(0); /* don't run dispatcher on ATOM platform */
 	}
-	
-	if (init_dispatcher())
-		goto err;
 
 	if (rte_eal_init_custom(dc->master_affinity))
 		goto err;
-		
+
+	if (init_dispatcher())
+		goto err;
+
 	if (init_interface())
 		goto err;
 
     for (i = 0; i < dc->dispatcher_num; i++) {
-	    dispatcher_item = dc->dispatcher_item + i;
-		core_id = dispatcher_item->affinity_core;
+		core_id = dc->dispatcher_item[i]->affinity_core;
 		ret = pthread_create(&lcore_config[core_id].thread_id, NULL,
-						     dispatch_main, dispatcher_item);
+						     dispatch_main, rte_dispatcher + i);
 		if (ret != 0) {
 			printf("Cannot create thread\n");
 			goto err;
@@ -854,7 +890,7 @@ int main(int argc, char *argv[])
 				
     while (1) {
   		sleep(1);
-        if (rte_atomic32_read(&thread_exit) == dc->dispatcher_num)
+        if (rte_atomic32_read(&thread_exit_cnt) == dc->dispatcher_num)
             break;
     }
     

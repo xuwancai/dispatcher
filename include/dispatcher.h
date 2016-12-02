@@ -46,6 +46,20 @@
 
 #define RAW_PKT_NODE_LEN 2048
 
+
+#define MAX_RING_SIZE       8192
+
+#define DISPATCHER_NAME     "dispatcher"
+#define MAX_APP_MAIN        32
+
+struct rte_dispatcher {
+    struct dispatcher_item disp_item;
+    struct rte_ring *app_ring[MAX_APP_MAIN];
+
+}__rte_cache_aligned;
+
+
+
 enum dispatcher_packet_type
 {
 	NON_IP_PACKET,

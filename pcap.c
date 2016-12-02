@@ -66,7 +66,6 @@ int main(int argc, char* argv[])
         }
     } else {
         while (1) {
-
             for(i = 0; i< 1000; ++i) {
                 if (pcap_sendpacket(dev, packet , sizeof(packet)) != 0) {
                     printf("send error\n");
