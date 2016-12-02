@@ -14,6 +14,15 @@ unsigned char packet[] = {
                 71,72,73,74,75,76,77,78,79,80,\
                 81,82,83,84,85,86,87,88,89,90,\
                 91,92,93,94,95,96,97,98,99,100};
+
+void handle_recv(u_char* argument,const struct pcap_pkthdr* packet_header,const u_char* packet_content)
+{
+    static recv = 0;
+    recv++;
+    if (recv % 1000 == 0)
+        printf("pcap recv num %d=", recv);
+    return;
+}
                 
 int main(int argc, char* argv[]) 
 {
@@ -24,8 +33,8 @@ int main(int argc, char* argv[])
     pcap_t* dev;
 	char err[PCAP_ERRBUF_SIZE] = {0};
 
-    if (argc != 2) {
-        printf("usage ./pcap eth0\n");
+    if (argc != 3) {
+        printf("usage ./pcap eth0 [recv/send]\n");
         return -1;   
     }
 
@@ -48,17 +57,23 @@ int main(int argc, char* argv[])
     if (dev == NULL)
         printf("pcap_open_live %s err\n", argv[1]);
 
-    while (1) {
-
-        for(i = 0; i< 1000; ++i) {
-            if (pcap_sendpacket(dev, packet , sizeof(packet)) != 0) {
-                printf("send error\n");
-                return -1;
-            }
+    if (strcmp(argv[2], "recv") == 0) {
+        while (1) {
+            pcap_loop(dev, -1, NULL, NULL);
         }
-        sleep(1);
-    }
+    } else {
+        while (1) {
 
+            for(i = 0; i< 1000; ++i) {
+                if (pcap_sendpacket(dev, packet , sizeof(packet)) != 0) {
+                    printf("send error\n");
+                    return -1;
+                }
+            }
+            sleep(1);
+        }
+    }
+    
     pcap_close(dev);
     pcap_freealldevs(alldevs);
     return 0;
