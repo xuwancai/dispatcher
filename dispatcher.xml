@@ -12,42 +12,22 @@
 		<AppNum>8</AppNum>
 		
 		<!-- The Num of Dispatcher Instance -->
-		<DispatcherNum>2</DispatcherNum>
+		<DispatcherNum>1</DispatcherNum>
 		<!-- Dispatcher Instance Config -->
 		<DispatcherItem>
 			<Item> 
 				<DispatcherItemID>0</DispatcherItemID>
 				<AffinityCore>0</AffinityCore>
-				<PhysicalPortNum>2</PhysicalPortNum>
-				<PhysicalPortID>0,1</PhysicalPortID>
-			</Item>
-			<Item> 
-				<DispatcherItemID>1</DispatcherItemID>
-				<AffinityCore>1</AffinityCore>
 				<PhysicalPortNum>1</PhysicalPortNum>
-				<PhysicalPortID>2</PhysicalPortID>
+				<PhysicalPortID>0</PhysicalPortID>
 			</Item>
 		</DispatcherItem>
 	
 		<!-- The Num of Physical Port Instance -->
-		<PhysicalPortNum>3</PhysicalPortNum>
+		<PhysicalPortNum>1</PhysicalPortNum>
 		<PhysicalPortItem>
 			<Item> 
 				<PhysicalPortID>0</PhysicalPortID>
-				<RxQueneNum>1</RxQueneNum>
-				<TxQueneNum>1</TxQueneNum>
-				<BufferNum>2047</BufferNum>
-				<BufferLen>2048</BufferLen>
-			</Item>
-			<Item> 
-				<PhysicalPortID>1</PhysicalPortID>
-				<RxQueneNum>1</RxQueneNum>
-				<TxQueneNum>1</TxQueneNum>
-				<BufferNum>2047</BufferNum>
-				<BufferLen>2048</BufferLen>
-			</Item>
-			<Item> 
-				<PhysicalPortID>2</PhysicalPortID>
 				<RxQueneNum>1</RxQueneNum>
 				<TxQueneNum>1</TxQueneNum>
 				<BufferNum>2047</BufferNum>

@@ -48,6 +48,8 @@
 #define MEMPOOL_CACHE_SIZE 256
 #define MAX_PKT_BURST 32
 
+struct ether_addr ports_eth_addr[RTE_MAX_ETHPORTS];
+
 static const struct rte_eth_conf port_conf = {
 	.rxmode = {
 		.split_hdr_size = 0,
@@ -527,6 +529,8 @@ void packet_handle(struct dispatcher_item *dispatcher_item)
     uint32_t i;
     uint32_t portid;
     uint32_t nb_rx;
+    static uint32_t total = 0;
+    static uint64_t total_last = 0;
     
 	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
 	
@@ -534,8 +538,14 @@ void packet_handle(struct dispatcher_item *dispatcher_item)
 
 		portid = dispatcher_item->phy_port_id[i];
 		nb_rx = rte_eth_rx_burst((uint8_t) portid, 0, pkts_burst, MAX_PKT_BURST);
+        total += nb_rx;
 	}
-	
+
+    if (total - total_last > 1000) {
+        total_last = total;
+        printf("recv packet: portid=%d, num=%d \n", portid, total);
+    }
+
 	return;
 }
 
@@ -564,11 +574,13 @@ void *dispatch_main(void *arg)
 		}
 	}
 
+    #if 0
 	do { /*waiting for app_main to initialize the share memory */
 		sleep(1);
 		//printf("Pid %d, waiting...\n", getpid());
 	} while (-1 == detect_process("vtysh"));
-
+    #endif
+    
 	while(1) {
 		if (unlikely(do_cleanup)) {
 		    rte_atomic32_inc(&thread_exit);
@@ -707,6 +719,7 @@ struct rte_mempool * pktmbuf_pool = NULL;
 static int init_interface() 
 {
 	int ret;
+	int i;
     uint32_t portid;
 	struct phy_port_item *phy_port_item;
 	struct rte_eth_dev_info dev_info;
@@ -738,6 +751,8 @@ static int init_interface()
 			return -1;
 		}
 
+        rte_eth_macaddr_get(portid, &ports_eth_addr[portid]);
+        
 		ret = rte_eth_rx_queue_setup(portid, 0, DIPATCHER_RX_DESC_DEFAULT,
 					     rte_eth_dev_socket_id(portid), NULL, pktmbuf_pool);
 		if (ret < 0) {
@@ -762,6 +777,15 @@ static int init_interface()
 		}
 		printf("done: \n");
 
+        printf("mac: ");
+        for (i=0; i<ETHER_ADDR_LEN; i++) {
+            if (i == ETHER_ADDR_LEN-1)
+               printf("0x%02x", ports_eth_addr[portid].addr_bytes[i]);
+            else
+               printf("0x%02x:", ports_eth_addr[portid].addr_bytes[i]);
+        }
+        printf("\n");
+        
 		rte_eth_promiscuous_enable(portid);	
 	}
 

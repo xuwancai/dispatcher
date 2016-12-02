@@ -61,6 +61,21 @@ err:
 	return -1;
 }
 
+static int get_child_node_by_name(xmlNodePtr *cur, xmlNodePtr *child, char *name)
+{
+    xmlNodePtr node = *cur;
+
+    while (NULL != node) {
+        if ((!xmlStrcmp(node->name, (const xmlChar *)name))) {
+            *child = node->xmlChildrenNode;
+            return 0;
+        }
+        node = node->next;
+   }
+
+   return -1;
+}
+
 static xmlChar* get_content_by_name(xmlNodePtr *cur, char *name)
 {
 	xmlNodePtr node = *cur;
@@ -77,38 +92,6 @@ static xmlChar* get_content_by_name(xmlNodePtr *cur, char *name)
 	return NULL;
 }
 
-static int get_child_node_by_name(xmlNodePtr *cur, xmlNodePtr *child, char *name)
-{
-	xmlNodePtr node = *cur;
-
-	while (NULL != node) {
-		if ((!xmlStrcmp(node->name, (const xmlChar *)name))) {
-			*child = node->xmlChildrenNode;
-			return 0;
-		}
-		node = node->next;
-	}
-
-	return -1;
-}
-
-static xmlChar* get_child_node_value_by_name(xmlNodePtr *cur, char *name)
-{
-	xmlNodePtr child;
-	xmlNodePtr node = *cur;
-	xmlChar *value = NULL;
-
-	if ((!xmlStrcmp(node->name, (const xmlChar *)XML_ITEM))) {
-		goto out;
-	}
-
-	if (!get_child_node_by_name(&node, &child, XML_ITEM)) {
-		value = get_content_by_name(&child, name);
-	}
-
-out:
-	return value;
-}
 
 static int prase_strsplit(char* buf, char split, uint32_t* store)
 {
@@ -187,20 +170,25 @@ int prase_dispatcher_conf(char *file)
 
 	if (!get_child_node_by_name(&node, &tmpnode, "DispatcherItem")) {
 		while (NULL != tmpnode) {
-			value = get_child_node_value_by_name(&tmpnode, "DispatcherItemID");
+            if (xmlStrcmp(tmpnode->name, (const xmlChar *)XML_ITEM)) {
+                tmpnode = tmpnode->next;
+                continue;
+            }
+                
+			value = get_content_by_name(&tmpnode->xmlChildrenNode, "DispatcherItemID");
             dispatcher_item = dc->dispatcher_item + atoi((char *)value);
             dispatcher_item->item_id = atoi((char *)value);
             xmlFree(value);
 			
-			value = get_child_node_value_by_name(&tmpnode, "AffinityCore");
+			value = get_content_by_name(&tmpnode->xmlChildrenNode, "AffinityCore");
             dispatcher_item->affinity_core = atoi((char *)value);
             xmlFree(value);
 
-			value = get_child_node_value_by_name(&tmpnode, "PhysicalPortNum");
+			value = get_content_by_name(&tmpnode->xmlChildrenNode, "PhysicalPortNum");
             dispatcher_item->phy_port_num = atoi((char *)value);
             xmlFree(value);
 
-			value = get_child_node_value_by_name(&tmpnode, "PhysicalPortID");
+			value = get_content_by_name(&tmpnode->xmlChildrenNode, "PhysicalPortID");
 			if (prase_strsplit((char*)value, ',', dispatcher_item->phy_port_id) != 
 				dispatcher_item->phy_port_num)
 				goto err;
@@ -220,23 +208,28 @@ int prase_dispatcher_conf(char *file)
 
 	if (!get_child_node_by_name(&node, &tmpnode, "PhysicalPortItem")) {
 		while (NULL != tmpnode) {
-			value = get_child_node_value_by_name(&tmpnode, "PhysicalPortID");
+            if (xmlStrcmp(tmpnode->name, (const xmlChar *)XML_ITEM)) {
+                tmpnode = tmpnode->next;
+                continue;
+            }
+            
+			value = get_content_by_name(&tmpnode->xmlChildrenNode, "PhysicalPortID");
             phy_port_item = dc->phy_port_item + atoi((char *)value);
             xmlFree(value);
 			
-			value = get_child_node_value_by_name(&tmpnode, "RxQueneNum");
+			value = get_content_by_name(&tmpnode->xmlChildrenNode, "RxQueneNum");
             phy_port_item->rx_queue_num = atoi((char *)value);
             xmlFree(value);
 
-			value = get_child_node_value_by_name(&tmpnode, "TxQueneNum");
+			value = get_content_by_name(&tmpnode->xmlChildrenNode, "TxQueneNum");
             phy_port_item->tx_queue_num = atoi((char *)value);
             xmlFree(value);
 
-			value = get_child_node_value_by_name(&tmpnode, "BufferNum");
+			value = get_content_by_name(&tmpnode->xmlChildrenNode, "BufferNum");
             phy_port_item->buf_num = atoi((char *)value);
             xmlFree(value);
 
-			value = get_child_node_value_by_name(&tmpnode, "BufferLen");
+			value = get_content_by_name(&tmpnode->xmlChildrenNode, "BufferLen");
             phy_port_item->buf_len = atoi((char *)value);
             xmlFree(value);
             
