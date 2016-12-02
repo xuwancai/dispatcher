@@ -15,6 +15,7 @@ LDFLAGS += -Wl,-lrte_kni -Wl,-lrte_pipeline -Wl,-lrte_table -Wl,-lrte_port -Wl,-
 BUILD=build
 
 SRC = $(wildcard ${DIR}/*.c)
+SRC = $(shell find ${DIR} -maxdepth 1 -name "*.c" | grep -v pcap)
 OBJ = $(patsubst %.c,${BUILD}/%.o, $(notdir ${SRC})) 
 
 TARGET = dispatcher
@@ -25,6 +26,10 @@ ${TARGET}:${OBJ}
 ${BUILD}/%.o:%.c
 	$(CC) $(CFLAGS) ${INCLUDE} -c $< -o $@
 
+.PHONY:pcap
+pcap:
+	$(CC) -g -O2 -Wall pcap.c -o pcap
+    
 .PHONY:clean
 clean:
 	rm -rf ${TARGET} 
