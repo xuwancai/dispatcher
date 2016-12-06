@@ -43,14 +43,10 @@
 #include "disp_common.h"
 #include "dispatcher.h"
 
-#define DIPATCHER_RX_DESC_DEFAULT 128
-#define DIPATCHER_TX_DESC_DEFAULT 512
-#define MEMPOOL_CACHE_SIZE 256
-#define MAX_PKT_BURST 16
-
 struct rte_dispatcher *rte_dispatcher = NULL;
 
 struct ether_addr ports_eth_addr[RTE_MAX_ETHPORTS];
+struct rte_mempool *pktmbuf_pool = NULL;
 
 static const struct rte_eth_conf port_conf = {
 	.rxmode = {
@@ -70,7 +66,7 @@ static rte_atomic32_t thread_init_cnt = RTE_ATOMIC32_INIT(0);
 static rte_atomic32_t thread_exit_cnt = RTE_ATOMIC32_INIT(0);
 
 int do_cleanup = 0;
-int global_serial_no=0;
+int global_serial_no = 0;
 
 #if 0
 /* copy from linux/ip.h*/
@@ -528,30 +524,31 @@ static int detect_process(char * process_name)
 	return -1;
 }
 
-void hup(int signo)
+static void hup(int signo)
 {
 	//print_dispatcher_profile();
 	return;
 }
 
-void report_msg(int signo)
+static void report_msg(int signo)
 {
 	//print_dispatcher_profile();
+	return;
 }
 
 //for signal()
-void setcleanup(int sig)
+static void setcleanup(int sig)
 {
 	do_cleanup = 1;
 }
 
 //for set_signal()
-void set_cleanup(int signo, siginfo_t *sig, void *data)
+static void set_cleanup(int signo, siginfo_t *sig, void *data)
 {
 	do_cleanup = 1;
 }
 
-void clean_interface(void)
+static void clean_interface(void)
 {
     uint32_t portid;
 	for (portid = 0; portid < dc->phy_port_num; portid++) {
@@ -564,7 +561,7 @@ void clean_interface(void)
 	return;
 }
 
-void clean_global(void)
+static void clean_global(void)
 {
 	rte_free(rte_dispatcher);
 	clean_interface();
@@ -589,10 +586,7 @@ static void signal_init(void)
 
 static int init_dispatcher(void)
 {
-	if (prase_dispatcher_conf("dispatcher.xml")) 
-		return -1;
-
-    rte_dispatcher = rte_zmalloc(DISPATCHER_NAME, sizeof(*rte_dispatcher) * dc->dispatcher_num, RTE_CACHE_LINE_SIZE)
+    rte_dispatcher = rte_zmalloc(DISPATCHER_NAME, sizeof(*rte_dispatcher) * dc->dispatcher_num, RTE_CACHE_LINE_SIZE);
 
     for (i=0; i<dc->dispatcher_num; i++) {
         memcpy(rte_dispatcher[i]->disp_item, dc->dispatcher_item[i], sizeof(dc->dispatcher_item[i]));
@@ -658,12 +652,11 @@ static void check_all_ports_link_status(uint8_t port_num)
 }
 
 
-struct rte_mempool * pktmbuf_pool = NULL;
-static int init_interface() 
+static int init_interface(void) 
 {
 	int ret;
 	int i;
-    uint32_t portid;
+    int portid;
 	struct phy_port_item *phy_port_item;
 	struct rte_eth_dev_info dev_info;
 
@@ -721,7 +714,7 @@ static int init_interface()
 		printf("done: \n");
 
         printf("mac: ");
-        for (i=0; i<ETHER_ADDR_LEN; i++) {
+        for (i = 0; i < ETHER_ADDR_LEN; i++) {
             if (i == ETHER_ADDR_LEN-1)
                printf("0x%02x", ports_eth_addr[portid].addr_bytes[i]);
             else
@@ -749,9 +742,9 @@ void packet_handle(struct rte_dispatcher *local_dispatcher)
     
 	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
 	
-	for (i = 0; i < local_dispatcher->disp_item->phy_port_num; i++) {
+	for (i = 0; i < local_dispatcher->disp_item.phy_port_num; i++) {
 
-		portid = local_dispatcher->disp_item->phy_port_id[i];
+		portid = local_dispatcher->disp_item.phy_port_id[i];
 		nb_rx = rte_eth_rx_burst((uint8_t) portid, 0, pkts_burst, MAX_PKT_BURST);
         if (nb_rx != 0) {
             total_rx += nb_rx;
@@ -771,10 +764,15 @@ void packet_handle(struct rte_dispatcher *local_dispatcher)
 /* 初始化dispatcher与app main的队列 */
 int init_queue(struct rte_dispatcher *local_dispatcher)
 {
+    int i;
+    int ret;
+    struct rte_ring *ring;
+ 	char ring_name[32];
+ 	
     /* 创建dispatcher 与app main的报文队列 */
-    for (i=0; i<dc->app_num; i++) {
+    for (i = 0; i < dc->app_num; i++) {
     	ret = snprintf(ring_name, sizeof(ring_name), "disp-%d:app-main-%d", 
-    	               local_dispatcher->disp_item->item_id, i);
+    	               local_dispatcher->disp_item.item_id, i);
 	    if (ret < 0 || ret >= (int)sizeof(ring_name)) {
 	        printf("creater ring name error %d\n", i);
             return -1;
@@ -787,18 +785,16 @@ int init_queue(struct rte_dispatcher *local_dispatcher)
         }
         local_dispatcher->app_ring[i] = ring;
     }
+    
     return 0;
 }
 
 void dispatch_main(void *arg)
 {
-    int i;
 	int ret;
-	char ring_name[32];
-	struct rte_ring *ring;
 	struct rte_dispatcher *local_dispatcher = (struct rte_dispatcher *)arg;
 	
-	rte_thread_init_slave(local_dispatcher->disp_item->affinity_core);
+	rte_thread_init_slave(local_dispatcher->disp_item.affinity_core);
 
     /* 创建dispatcher 与app main的报文队列 */
     if (init_queue(local_dispatcher))
@@ -811,7 +807,7 @@ void dispatch_main(void *arg)
     }
      
 	/* 最后一个线程写入 */
-	if (local_dispatcher->disp_item->item_id == (dc->dispatcher_num - 1)) {
+	if (local_dispatcher->disp_item.item_id == (dc->dispatcher_num - 1)) {
 		ret = system("echo 1 > /tmp/dispatcher.ok");
 		if (WIFSIGNALED(ret) && (WTERMSIG(ret)==SIGINT || WTERMSIG(ret)==SIGQUIT)) {
 			printf("Can not create file /tmp/disptcher.ok!\n");
@@ -864,6 +860,9 @@ int main(int argc, char *argv[])
 		exit(0); /* don't run dispatcher on ATOM platform */
 	}
 
+	if (prase_dispatcher_conf("dispatcher.xml")) 
+		return -1;
+		
 	if (rte_eal_init_custom(dc->master_affinity))
 		goto err;
 

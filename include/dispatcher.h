@@ -11,6 +11,11 @@
 #include "hash.h"
 
 
+#define DIPATCHER_RX_DESC_DEFAULT   128
+#define DIPATCHER_TX_DESC_DEFAULT   512
+#define MEMPOOL_CACHE_SIZE          256
+#define MAX_PKT_BURST               16
+
 #define MAX_PHY_CPU_NUM 2
 #define POLICY_AVERAGE	0
 #define POLICY_FLOW		1
@@ -55,7 +60,6 @@
 struct rte_dispatcher {
     struct dispatcher_item disp_item;
     struct rte_ring *app_ring[MAX_APP_MAIN];
-
 }__rte_cache_aligned;
 
 
