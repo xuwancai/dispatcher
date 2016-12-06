@@ -7,7 +7,7 @@
 #include "userspace_list.h"
 // #include "atomic.h"
 // #include "disp_tbl_ops.h"
-#include "rte_config.h"
+#include "rte_eal.h"
 #include "rte_atomic.h"
 #include "rte_rwlock.h"
 

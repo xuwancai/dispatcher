@@ -8,6 +8,8 @@
 #include <linux/if_ether.h>
 #include <asm/byteorder.h>
 
+#include "hash.h"
+
 #define NEXTHDR_HOP		    0	/* Hop-by-hop option header. */
 #define NEXTHDR_ROUTING		43	/* Routing header. */
 #define NEXTHDR_FRAGMENT	44	/* Fragmentation/reassembly header. */
@@ -18,6 +20,21 @@
 
 #define DIS_XOR(n) (((n >> 24) & 0xff) ^ ((n >> 16) & 0xff) \
 					^ ((n >> 8) & 0xff) ^  (n & 0xff))
+
+#define IP_CE		0x8000
+#define IP_DF		0x4000
+#define IP_MF		0x2000
+#define IP_OFFSET	0x1FFF
+//#define IP_OFFMASK	0x1FF
+
+
+//#define MAX_IPID_ITEM	(1<<20) // 1048576
+#define MAX_IPID_ITEM	(1<<12)
+#define MAX_IPID_BUFF	10240
+
+#define isfragment(x)	((x) & (IP_MF|IP_OFFMASK))
+#define	is_last_fragment(x)	((((x) & IP_MF) == 0) && ((x) & IP_OFFMASK))
+
 
 /* copy from linux/ip.h*/
 struct ip_auth_hdr {

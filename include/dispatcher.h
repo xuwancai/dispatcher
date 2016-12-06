@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include <sys/types.h>
 
-#include "userspace_list.h"
-#include "hash.h"
 #include "disp_prase_config.h"
 #include "disp_packet.h"
 
@@ -13,47 +11,9 @@
 #define DIPATCHER_TX_DESC_DEFAULT   512
 #define MEMPOOL_CACHE_SIZE          256
 #define MAX_PKT_BURST               16
-
-#define MAX_PHY_CPU_NUM 2
-#define POLICY_AVERAGE	0
-#define POLICY_FLOW		1
-#define POLICY_IP		2
-
-#define IP_CE		0x8000
-#define IP_DF		0x4000
-#define IP_MF		0x2000
-#define IP_OFFSET	0x1FFF
-//#define IP_OFFMASK	0x1FFF
-
-#define MAX_CAPTURE_CONTINUOUS_ERROR	128
-#define CAPTURE_STOP	0
-#define CAPTURE_ERR		-1
-#define CAPTURE_NO		-2
-
-
-#define CAPTOR_ARG_NUM	32
-#define CAPTOR_ARGSTR_LEN	80
-#define DEFAULT_CAPTOR_NAME	"dummy"
-#define RUNARGS_LEN		256
-#define RUNARGS_NUM		32
-#define DEFAULT_RUNARGS	""
-
-
-//#define MAX_IPID_ITEM	(1<<20) // 1048576
-#define MAX_IPID_ITEM	(1<<12)
-#define MAX_IPID_BUFF	10240
-
-#define isfragment(x)	((x) & (IP_MF|IP_OFFMASK))
-#define	is_last_fragment(x)	((((x) & IP_MF) == 0) && ((x) & IP_OFFMASK))
-
-
-#define RAW_PKT_NODE_LEN 2048
-
-
-#define MAX_RING_SIZE       8192
-
-#define DISPATCHER_NAME     "dispatcher"
-#define MAX_APP_MAIN        32
+#define MAX_RING_SIZE               8192
+#define MAX_APP_MAIN                32
+#define DISPATCHER_NAME             "dispatcher"
 
 struct rte_dispatcher {
     struct dispatcher_item disp_item;

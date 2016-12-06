@@ -22,7 +22,6 @@
 #include "disp_prase_config.h"
 #include "disp_packet.h"
 
-
 unsigned long long packet_num = 0;
 
 static int dispatch_task_flow(struct dis_five_tuple *t)
