@@ -148,7 +148,7 @@ static int rte_system_cb_init(void)
 int init_child_ssn(void)
 {
 	int ret;
-	int node_id, 
+	int node_id;
 	int node_num = rte_eal_get_configuration()->socket_count;
 
 	ret = rte_system_cb_init();

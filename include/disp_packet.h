@@ -6,7 +6,7 @@
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <linux/if_ether.h>
-
+#include <asm/byteorder.h>
 
 #define NEXTHDR_HOP		    0	/* Hop-by-hop option header. */
 #define NEXTHDR_ROUTING		43	/* Routing header. */
@@ -127,6 +127,6 @@ struct dis_five_tuple
 	u_int8_t tuple;
 };
 
-int pre_deal_pkt(u_int8_t *raw_packet, int raw_packet_len)
+int pre_deal_pkt(u_int8_t *raw_packet, int raw_packet_len);
 
 #endif /* _DISP_PACKET_H */

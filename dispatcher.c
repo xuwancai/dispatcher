@@ -67,7 +67,7 @@ static rte_atomic32_t thread_exit_cnt = RTE_ATOMIC32_INIT(0);
 int do_cleanup = 0;
 int global_serial_no = 0;
 
-
+#if 0
 int packet_callback(struct nm_pkt_header *nph)
 {
 	int ret_worker_id = 0;
@@ -160,6 +160,7 @@ static void clean_global(void)
 	rte_free(rte_dispatcher);
 	clean_interface();
 	clean_dispatcher_conf();
+	
 	return;
 }
 
@@ -361,7 +362,7 @@ static void packet_handle(struct rte_dispatcher *local_dispatcher)
             total_rx += nb_rx;
             for (rx_index = 0; rx_index < nb_rx; rx_index++) {
                 work_id = pre_deal_pkt(rte_pktmbuf_mtod(pkts_burst[rx_index], u_int8_t *),
-                                       rte_pktmbuf_pkt_len(pkts_burst[rx_index]);
+                                       rte_pktmbuf_pkt_len(pkts_burst[rx_index]));
 
                 inqueue = rte_ring_enqueue(local_dispatcher->app_ring[work_id-1], pkts_burst[rx_index]);
                 if (inqueue != 1) {
