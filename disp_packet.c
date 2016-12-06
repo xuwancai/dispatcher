@@ -24,6 +24,15 @@
 
 unsigned long long packet_num = 0;
 
+static inline u_int16_t get_align_u16(u_int8_t *data)
+{
+#ifdef AVOID_ALIGN_BYTE
+	return (u_int16_t)((data[0] << 8) | (data[1]));
+#else
+	return *((u_int16_t *)data);
+#endif
+}
+
 static int dispatch_task_flow(struct dis_five_tuple *t)
 {
 	unsigned int core = 0;

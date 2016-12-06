@@ -410,7 +410,7 @@ static int init_queue(struct rte_dispatcher *local_dispatcher)
     return 0;
 }
 
-static void dispatch_main(void *arg)
+static void * dispatcher_main(void *arg)
 {
 	int ret;
 	struct rte_dispatcher *local_dispatcher = (struct rte_dispatcher *)arg;
@@ -495,7 +495,7 @@ int main(int argc, char *argv[])
     for (i = 0; i < dc->dispatcher_num; i++) {
 		core_id = dc->dispatcher_item[i].affinity_core;
 		ret = pthread_create(&lcore_config[core_id].thread_id, NULL,
-						     dispatch_main, rte_dispatcher + i);
+						     dispatcher_main, rte_dispatcher + i);
 		if (ret != 0) {
 			printf("Cannot create thread\n");
 			goto err;
