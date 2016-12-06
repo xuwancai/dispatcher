@@ -117,7 +117,7 @@ int get_coreid_from_hash(key_args_t *karg)
 		return -1;
 	}
 	item = _hash_get_node(key, table_node, h_eqfunc, karg);
-	if(NULL!=item){
+	if (NULL != item) {
 		data = hash_item_entry(item, struct child_node, hash_node);
 		core_id = data->core_num;
 	}

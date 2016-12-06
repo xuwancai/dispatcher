@@ -9,11 +9,11 @@
 #include <unistd.h>
 
 #include "rte_config.h"
+#include "rte_eal.h"
 
 #include "disp_common.h"
 #include "hash.h"
 #include "dispatcher.h"
-
 
 #define MAX_CYCLE_CHILD_ALARM	2
 #define MAX_TIME_CHILD_ALARM	10
@@ -23,8 +23,6 @@
 
 struct hash_t *child_table[RTE_MAX_NUMA_NODES];
 struct disp_cb *disp_cb = NULL;
-extern struct dispatcher_conf *dc;
-unsigned int *netmap_debug_flag = NULL;
 
 #define  NIPQUAD(addr) \
 	((unsigned char *)&addr)[0], \
@@ -61,7 +59,7 @@ int child_table_check(struct dis_five_tuple *t)
 	key_args_t karg;
 
 	//为了减少hash查询，提高效率，尽量过滤一些报文，包括非tcp协议，低端的报文
-	if((t->protocol != 6)&&(t->protocol != 17)&&(t->protocol != 47)) //非tcp协议不是子连接
+	if ((t->protocol != 6)&&(t->protocol != 17)&&(t->protocol != 47)) //非tcp协议不是子连接
 		goto err;
 
 	/*if((sport != 20 && sport < 1024)
@@ -91,11 +89,11 @@ int child_table_check(struct dis_five_tuple *t)
 	karg.key = key;
 	karg.match_type = 5;
 	core_id = get_coreid_from_hash(&karg);
-	if(core_id < 0){
+	if (core_id < 0) {
 		goto err;
 	}
 
-	if(*netmap_debug_flag & DISPATCHER_DEBUG_CHILD){
+	if (disp_cb->debug_flag & DISPATCHER_DEBUG_CHILD) {
 		if (t->iptype == 4)
 			printf("Check :Dispatch ( %u.%u.%u.%u:%hu -> %u.%u.%u.%u:%hu), coreid=%d, key=0x%x\r\n",
 				NIPQUAD(t->sip.ipv4_addr), ntohs(t->sport), 
@@ -110,3 +108,61 @@ int child_table_check(struct dis_five_tuple *t)
 err:
 	return -1;
 }
+
+#define RTE_SYS_CB_FILE "/var/run/.rte_sys_cb"
+#define RTE_SYS_CB_SIZE 0xA0000UL
+#define RTE_SYS_CB_ADDR 0x100000000UL
+
+static int rte_system_cb_init(void)
+{
+	int fd;
+	int ret;
+	void *addr;
+	
+	fd = open(RTE_SYS_CB_FILE, O_CREAT|O_RDWR|O_TRUNC, 00777);
+	if (fd < 0) {
+		printf("Failed to open or create the shared file.\n");
+		return -1;
+	}
+	ret = ftruncate(fd, RTE_SYS_CB_SIZE);
+	if (ret < 0) {
+		printf("Failed to truncate the shared file.\n");
+		close(fd);
+		return -1;
+	}
+
+	addr = mmap((void *)RTE_SYS_CB_ADDR, RTE_SYS_CB_SIZE, PROT_READ|PROT_WRITE, MAP_SHARED|MAP_FIXED, fd, 0);
+	if (addr == MAP_FAILED) {
+		perror("mmap");
+		close(fd);
+		return -1;
+	}
+	close(fd);
+	memset(addr, 0, RTE_SYS_CB_SIZE);
+
+	disp_cb = (struct disp_cb*)addr;
+
+	return 0;
+}
+
+int init_child_ssn(void)
+{
+	int ret;
+	int node_id, 
+	int node_num = rte_eal_get_configuration()->socket_count;
+
+	ret = rte_system_cb_init();
+	if (ret) {
+		printf("Failed to initialze system control block.\n");
+		return -1;
+	}
+      
+	for (node_id = 0; node_id < node_num; node_id++){
+		// printf("Disp node %d start = 0x%lx\n", node_id, numa_node_start(node_id));
+		// TODO: 确定child_table的长度
+		//child_table[node_id] = (struct hash_t *)numa_node_start(node_id);
+	}
+
+	return 0;
+}
+

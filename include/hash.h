@@ -55,12 +55,6 @@ struct hashitem_t
 	unsigned int size;		// 标识当前节点大小
 };
 
-struct disp_cb{
-	unsigned int netmap_debug_flag;
-	char init_ok;
-	char need_lock;
-};
-
 struct hash_t
 {
 	struct htnode_t *h_table;	// table head

@@ -22,7 +22,6 @@
 #define XML_DISPATCHER       "Dispatcher"
 #define XML_ITEM             "Item"
 
-
 struct dispatcher_conf *dc = NULL;
 
 static int32_t open_xml_file(xmlDocPtr *doc, char *xml_file_path)

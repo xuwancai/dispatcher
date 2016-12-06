@@ -20,7 +20,7 @@ void handle_recv(u_char* argument,const struct pcap_pkthdr* packet_header,const 
     static unsigned long long recv = 0;
     recv++;
     if (recv % 1000 == 0) {
-        printf("pcap recv num %d=", recv);
+        printf("pcap recv num %d=\n", recv);
         fflush(stdout);
     }
 

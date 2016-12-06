@@ -3,13 +3,11 @@
 
 #include <stdio.h>
 #include <sys/types.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
-#include <linux/if_ether.h>
 
 #include "userspace_list.h"
 #include "hash.h"
 #include "disp_prase_config.h"
+#include "disp_packet.h"
 
 #define DIPATCHER_RX_DESC_DEFAULT   128
 #define DIPATCHER_TX_DESC_DEFAULT   512
@@ -63,68 +61,11 @@ struct rte_dispatcher {
 }__rte_cache_aligned;
 
 
-
-enum dispatcher_packet_type
-{
-	NON_IP_PACKET,
-	BARE_IP_PACKET,
-	PPPOE_IP_PACKET,
-	MPLS_IP_PACKET,
-	ARP_PACKET,
-	ETH_P_802_2_LLC_PACKET,
-	IPV6_IP_PACKET,
-	//you can add more type here
+struct disp_cb{
+	unsigned int debug_flag;
+	char init_ok;
+	char need_lock;
 };
-
-struct dispatch_vlanhdr
-{
-	u_int16_t vh_pri_cfi_vlan;
-	u_int16_t vh_proto;
-};
-
-struct ip_frag_data
-{
-	u_int8_t timer;
-	int8_t core_num;
-	u_int8_t frag_num;
-	int8_t inuse;
-	int idx;
-	int key;
-	struct list_head pkt_list; // buffer of ip fragment
-};
-
-struct raw_pkt_node
-{
-	struct list_head list;
-	int idx;	// dispatcher 传递给dt的索引
-	int raw_packet_len;
-	int8_t inuse;
-	int8_t nic_num;	// 提取包的网口的序号
-	//unsigned char raw_packet[RAW_PKT_NODE_LEN];
-	struct nm_skb *skb;
-};
-
-struct dis_five_tuple
-{
-	union {
-		u_int32_t ipv4_addr;
-		u_int32_t ipv6_addr[4];
-	} sip;
-	union {
-		u_int32_t ipv4_addr;
-		u_int32_t ipv6_addr[4];
-	} dip;
-	u_int16_t sport;
-	u_int16_t dport;
-	u_int16_t iptype;
-	u_int8_t protocol;
-	u_int8_t tuple;
-};
-
-int (*dispatch_task)(char *pkt, int len, u_int8_t *ip_head, int num);
-int dispatch_task_average(char *pkt, int len, u_int8_t *ip_head, int num);
-int dispatch_task_ip(char *pkt, int len, u_int8_t *ip_head, int num);
-
 
 // for child ssn
 struct child_node
@@ -135,12 +76,16 @@ struct child_node
 	u_int8_t timer;
 };
 
+int child_table_check(struct dis_five_tuple *t);
+
+#if 0
 int child_table_init(void);
 struct hash_t *child_table_get(void);
-int child_table_check(struct dis_five_tuple *t);
 int add_child_table(struct hash_t *child_table, key_args_t *arg);
 int reset_child_table(void);
 void child_table_clean(void);
+#endif
+
 void disp_backtrace_init(void);
 
 #endif
