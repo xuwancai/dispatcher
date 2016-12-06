@@ -9,7 +9,7 @@
 
 #include "userspace_list.h"
 #include "hash.h"
-
+#include "disp_prase_config.h"
 
 #define DIPATCHER_RX_DESC_DEFAULT   128
 #define DIPATCHER_TX_DESC_DEFAULT   512

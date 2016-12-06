@@ -39,7 +39,6 @@
 #include "rte_mempool.h"
 #include "rte_mbuf.h"
 
-#include "disp_prase_config.h"
 #include "disp_common.h"
 #include "dispatcher.h"
 
