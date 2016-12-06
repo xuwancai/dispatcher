@@ -585,9 +585,11 @@ static void signal_init(void)
 
 static int init_dispatcher(void)
 {
+    int i;
+    
     rte_dispatcher = rte_zmalloc(DISPATCHER_NAME, sizeof(*rte_dispatcher) * dc->dispatcher_num, RTE_CACHE_LINE_SIZE);
 
-    for (i=0; i<dc->dispatcher_num; i++) {
+    for (i = 0; i < dc->dispatcher_num; i++) {
         memcpy(rte_dispatcher[i]->disp_item, dc->dispatcher_item[i], sizeof(dc->dispatcher_item[i]));
     }
     
@@ -872,7 +874,7 @@ int main(int argc, char *argv[])
 		goto err;
 
     for (i = 0; i < dc->dispatcher_num; i++) {
-		core_id = dc->dispatcher_item[i]->affinity_core;
+		core_id = dc->dispatcher_item[i].affinity_core;
 		ret = pthread_create(&lcore_config[core_id].thread_id, NULL,
 						     dispatch_main, rte_dispatcher + i);
 		if (ret != 0) {
